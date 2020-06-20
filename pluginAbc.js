@@ -327,7 +327,7 @@ background-color: #C5C9CD;
 }
 
 // Register
-        zw.plugin.register(pluginABC);
+zw.plugin.register(pluginABC);
 
 pluginABC.onLoad();
 
