@@ -37,8 +37,7 @@ var pluginABC = {
     // The Zipwhip Plugin Bootstrapper calls this method.
     onLoad: function() {
 
-        // Register
-        zw.plugin.register(this.id, this.settings, this);
+        
 
         zw.plugin.addCss(
 `.` + this.id + `-convlistitem-abctag {
@@ -326,6 +325,9 @@ background-color: #C5C9CD;
     },
 
 }
+
+// Register
+        zw.plugin.register(pluginABC);
 
 pluginABC.onLoad();
 
