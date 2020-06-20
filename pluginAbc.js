@@ -236,7 +236,7 @@ background-color: #C5C9CD;
         if (regionEl.length == 0) {
             // it does not, create it
             regionEl = zw.plugin.getOrCreateComposeBoxTopRegionCss(this.id + '-pay', "Apple Pay Widget", this.iconUrlPay, "hidden");
-            regionEl.find('.plugin-composebox-topregion-body').text("ABC Apple Pay - Coming soon. Lets you accept payments via Apple Pay.");
+            regionEl.find('.plugin-composebox-topregion-body').text("ABC Apple Pay - dfred Coming soon. Lets you accept payments via Apple Pay.");
             // make x close button clickable
             regionEl.find('.zk-button').click(this.onClickPayBtn.bind(this));
             // make icon bigger
