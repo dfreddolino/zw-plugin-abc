@@ -37,7 +37,7 @@ var pluginABC = {
     // The Zipwhip Plugin Bootstrapper calls this method.
     onLoad: function() {
 
-        
+
 
         zw.plugin.addCss(
 `.` + this.id + `-convlistitem-abctag {
@@ -195,9 +195,28 @@ background-color: #C5C9CD;
     btnCalEl: null,
     btnLocEl: null,
 
+    /*
+   onComposeBoxLoad. evt:
+{composeTextAreaEl: k.fn.init(1), composeBoxBtnBarPluginEl: k.fn.init(1), composeTopRegionPluginEl: k.fn.init(0), phoneObj: {…}, phone: "(844) 713-7312", …}
+composeBoxBtnBarPluginEl: k.fn.init [div.plugin-composebox-btnbar]
+composeTextAreaEl: k.fn.init [textarea.zk-text-editor_input.zk-text-editor_content.compose-box_textInput, prevObject: k.fn.init(1)]
+composeTopRegionPluginEl: k.fn.init [prevObject: k.fn.init(1)]
+contact: {id: 28914824407, version: 16, lastUpdated: "2020-06-10T22:06:27+00:00", dateCreated: "2019-08-20T23:45:07+00:00", deviceId: 397515007, …}
+contactId: 28914824407
+conversation: {id: 380107130207, version: 66, deviceId: 397515007, lastUpdated: "2020-06-12T21:27:20+00:00", dateCreated: "2019-08-23T17:50:25+00:00", …}
+oldPhone: null
+phone: "(844) 713-7312"
+phoneObj: {phone: "(844) 713-7312", isGroup: false}
+__proto__: Object
+
+     */
+
     onComposeBoxLoad: function(evt) {
 
         console.log("onComposeBoxLoad. evt:", evt);
+
+        // given text area element which will be used later in apple pay button. store in this object
+        this.composeTextAreaEl = evt.composeTextAreaEl;
 
         // remove purple from bubbles
         $('.message-panel_messageContainer').removeClass("plugin-abc-bubble");
@@ -235,19 +254,35 @@ background-color: #C5C9CD;
         if (regionEl.length == 0) {
             // it does not, create it
             regionEl = zw.plugin.getOrCreateComposeBoxTopRegionCss(this.id + '-pay', "Apple Pay Widget", this.iconUrlPay, "hidden");
-            regionEl.find('.plugin-composebox-topregion-body').text("ABC Apple Pay - dfred Coming soon. Lets you accept payments via Apple Pay.");
+            //regionEl.find('.plugin-composebox-topregion-body').text("ABC Apple Pay - dfred Coming soon. Lets you accept payments via Apple Pay.");
             // make x close button clickable
             regionEl.find('.zk-button').click(this.onClickPayBtn.bind(this));
             // make icon bigger
             regionEl.find('.topregion-iconurl').addClass('topregion-abc-iconurl');
+            // making pay input
+            var el = $(`
+            
+                 <span>$ </span><input type="number" min="0.01" step="0.01" max="2500" value="25.67"></input>
+                
+            `);
+            regionEl.find(".plugin-composebox-topregion-body").append(el);
+
         }
 
         if (regionEl.hasClass("hidden")) {
+            // now showing
             regionEl.removeClass("hidden");
             this.btnPayEl.find('.iconUrlBaseSvg').addClass("active");
+            $('.send-message-panel_buttonWrapper > .zk-button.zk-button-primary > div').text("Send Pay");
+            console.log("changing text area message",this.composeTextAreaEl);
+            this.composeTextAreaEl.attr("placeholder","Type Apple Pay comment");
         } else {
+            // now hiding
             regionEl.addClass("hidden"); // ensure hidden
             this.btnPayEl.find('.iconUrlBaseSvg').removeClass("active");
+            $('.send-message-panel_buttonWrapper > .zk-button.zk-button-primary > div').text("Send ABC");
+            console.log("changing text area message",this.composeTextAreaEl);
+            this.composeTextAreaEl.attr("placeholder","Type a message or paste an image");
         }
 
     },
@@ -309,9 +344,20 @@ background-color: #C5C9CD;
         if (regionEl.length == 0) {
             // it does not, create it
             regionEl = zw.plugin.getOrCreateComposeBoxTopRegionCss(this.id + '-loc', "Location Share Widget", this.iconUrlLoc, "hidden");
-            regionEl.find('.plugin-composebox-topregion-body').text("ABC Location Share - Coming soon. Lets you send your map location.");
+            regionEl.find('.plugin-composebox-topregion-body').text("ABC Location Share.");
             // make x close button clickable
             regionEl.find('.zk-button').click(this.onClickLocBtn.bind(this));
+            // google map injection
+            // creating global method for google maps to load
+            window["initAutocomplete"] = this.initAutocomplete.bind(this);
+            var el = $(`
+            <input id="pac-input" class="controls" type="text" placeholder="Search Box">
+                <div id="map" style="border: 1px solid red"></div>
+                <!-- Replace the value of the key parameter with your own API key. -->
+                <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCkUOdZ5y7hMm0yrcCQoCvLwzdM6M8s5qk&libraries=places&callback=initAutocomplete"
+            async defer></script>
+            `);
+            regionEl.find(".plugin-composebox-topregion-body").append(el);
         }
 
         if (regionEl.hasClass("hidden")) {
@@ -323,6 +369,85 @@ background-color: #C5C9CD;
         }
 
     },
+
+
+
+    // this is taken from google sample code for how to embed a map
+    // This example adds a search box to a map, using the Google Place Autocomplete
+    // feature. People can enter geographical searches. The search box will return a
+    // pick list containing a mix of places and predicted search terms.
+
+    // This example requires the Places library. Include the libraries=places
+    // parameter when you first load the API. For example:
+    // <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places">
+
+    initAutocomplete: function () {
+        var map = new google.maps.Map(document.getElementById('map'), {
+            center: {lat: -33.8688, lng: 151.2195},
+            zoom: 13,
+            mapTypeId: 'roadmap'
+        });
+
+        // Create the search box and link it to the UI element.
+        var input = document.getElementById('pac-input');
+        var searchBox = new google.maps.places.SearchBox(input);
+        map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+
+        // Bias the SearchBox results towards current map's viewport.
+        map.addListener('bounds_changed', function () {
+            searchBox.setBounds(map.getBounds());
+        });
+
+        var markers = [];
+        // Listen for the event fired when the user selects a prediction and retrieve
+        // more details for that place.
+        searchBox.addListener('places_changed', function () {
+            var places = searchBox.getPlaces();
+
+            if (places.length == 0) {
+                return;
+            }
+
+            // Clear out the old markers.
+            markers.forEach(function (marker) {
+                marker.setMap(null);
+            });
+            markers = [];
+
+            // For each place, get the icon, name and location.
+            var bounds = new google.maps.LatLngBounds();
+            places.forEach(function (place) {
+                if (!place.geometry) {
+                    console.log("Returned place contains no geometry");
+                    return;
+                }
+                var icon = {
+                    url: place.icon,
+                    size: new google.maps.Size(71, 71),
+                    origin: new google.maps.Point(0, 0),
+                    anchor: new google.maps.Point(17, 34),
+                    scaledSize: new google.maps.Size(25, 25)
+                };
+
+                // Create a marker for each place.
+                markers.push(new google.maps.Marker({
+                    map: map,
+                    icon: icon,
+                    title: place.name,
+                    position: place.geometry.location
+                }));
+
+                if (place.geometry.viewport) {
+                    // Only geocodes have viewport.
+                    bounds.union(place.geometry.viewport);
+                } else {
+                    bounds.extend(place.geometry.location);
+                }
+            });
+            map.fitBounds(bounds);
+        });
+    },
+
 
 }
 
