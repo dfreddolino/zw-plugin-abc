@@ -344,33 +344,154 @@ __proto__: Object
         if (regionEl.length == 0) {
             // it does not, create it
             regionEl = zw.plugin.getOrCreateComposeBoxTopRegionCss(this.id + '-loc', "Location Share Widget", this.iconUrlLoc, "hidden");
-            regionEl.find('.plugin-composebox-topregion-body').text("ABC Location Share.");
+            regionEl.find('.plugin-composebox-topregion-body').text("ABC Location Share. ");
             // make x close button clickable
             regionEl.find('.zk-button').click(this.onClickLocBtn.bind(this));
             // google map injection
             // creating global method for google maps to load
-            window["initAutocomplete"] = this.initAutocomplete.bind(this);
+            // window["initAutocomplete"] = this.initAutocomplete.bind(this);
+            window["initMap"] = this.initMap.bind(this);
             var el = $(`
-            <input id="pac-input" class="controls" type="text" placeholder="Search Box">
+
+                <div class="pac-card" id="pac-card">
+                    <div>
+                        <div id="type-selector" class="pac-controls">
+                    </div>
+                </div>
+<div id="pac-container">
+    <input id="pac-input" type="text"
+        placeholder="Enter a location">
+ </div>
+</div>
+<div id="map"></div>
+<div id="infowindow-content">
+  <img src="" width="16" height="16" id="place-icon">
+  <span id="place-name"  class="title"></span><br>
+  <span id="place-address"></span>
+</div>
+<!-- Replace the value of the key parameter with your own API key. -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCbFUswRftDHv-XwnmJsmVkb09LlVeIzFk&libraries=places&callback=initMap" async defer></script>
+
+
+           <!-- <input id="pac-input" class="controls" type="text" placeholder="Address to send" width="300">
                 <div id="map" style="border: 1px solid red"></div>
-                <!-- Replace the value of the key parameter with your own API key. -->
-                <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCkUOdZ5y7hMm0yrcCQoCvLwzdM6M8s5qk&libraries=places&callback=initAutocomplete"
-            async defer></script>
+                &lt;!&ndash; Replace the value of the key parameter with your own API key. &ndash;&gt;
+                <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCbFUswRftDHv-XwnmJsmVkb09LlVeIzFk&libraries=places&callback=initAutocomplete"
+            async defer></script>-->
+               
             `);
             regionEl.find(".plugin-composebox-topregion-body").append(el);
         }
 
         if (regionEl.hasClass("hidden")) {
+            // now showing
             regionEl.removeClass("hidden");
             this.btnLocEl.find('.iconUrlBaseSvg').addClass("active");
+            $('.send-message-panel_buttonWrapper > .zk-button.zk-button-primary > div').text("Send Location");
+            console.log("changing text area message",this.composeTextAreaEl);
+            this.composeTextAreaEl.attr("placeholder","Type location comment");
         } else {
+            // now hiding
             regionEl.addClass("hidden"); // ensure hidden
             this.btnLocEl.find('.iconUrlBaseSvg').removeClass("active");
+            $('.send-message-panel_buttonWrapper > .zk-button.zk-button-primary > div').text("Send ABC");
+            console.log("changing text area message",this.composeTextAreaEl);
+            this.composeTextAreaEl.attr("placeholder","Type a message or paste an image");
         }
 
     },
 
+// This example requires the Places library. Include the libraries=places
+// parameter when you first load the API. For example:
+// <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places">
 
+    initMap: function () {
+    var map = new google.maps.Map(document.getElementById('map'), {
+        center: {lat: 47.621881, lng: -122.3637766},
+        zoom: 11
+    });
+    var card = document.getElementById('pac-card');
+    var input = document.getElementById('pac-input');
+    var types = document.getElementById('type-selector');
+    var strictBounds = document.getElementById('strict-bounds-selector');
+
+    map.controls[google.maps.ControlPosition.TOP_RIGHT].push(card);
+
+    var autocomplete = new google.maps.places.Autocomplete(input);
+
+    // Bind the map's bounds (viewport) property to the autocomplete object,
+    // so that the autocomplete requests use the current map bounds for the
+    // bounds option in the request.
+    autocomplete.bindTo('bounds', map);
+
+    // Set the data fields to return when the user selects a place.
+    autocomplete.setFields(
+        ['address_components', 'geometry', 'icon', 'name']);
+
+    var infowindow = new google.maps.InfoWindow();
+    var infowindowContent = document.getElementById('infowindow-content');
+    infowindow.setContent(infowindowContent);
+    var marker = new google.maps.Marker({
+        map: map,
+        anchorPoint: new google.maps.Point(0, -29)
+    });
+
+    autocomplete.addListener('place_changed', function() {
+        infowindow.close();
+        marker.setVisible(false);
+        var place = autocomplete.getPlace();
+        if (!place.geometry) {
+            // User entered the name of a Place that was not suggested and
+            // pressed the Enter key, or the Place Details request failed.
+            window.alert("No details available for input: '" + place.name + "'");
+            return;
+        }
+
+        // If the place has a geometry, then present it on a map.
+        if (place.geometry.viewport) {
+            map.fitBounds(place.geometry.viewport);
+        } else {
+            map.setCenter(place.geometry.location);
+            map.setZoom(17);  // Why 17? Because it looks good.
+        }
+        marker.setPosition(place.geometry.location);
+        marker.setVisible(true);
+
+        var address = '';
+        if (place.address_components) {
+            address = [
+                (place.address_components[0] && place.address_components[0].short_name || ''),
+                (place.address_components[1] && place.address_components[1].short_name || ''),
+                (place.address_components[2] && place.address_components[2].short_name || '')
+            ].join(' ');
+        }
+
+        infowindowContent.children['place-icon'].src = place.icon;
+        infowindowContent.children['place-name'].textContent = place.name;
+        infowindowContent.children['place-address'].textContent = address;
+        infowindow.open(map, marker);
+    });
+
+    // Sets a listener on a radio button to change the filter type on Places
+    // Autocomplete.
+    function setupClickListener(id, types) {
+        var radioButton = document.getElementById(id);
+        radioButton.addEventListener('click', function() {
+            autocomplete.setTypes(types);
+        });
+    }
+
+    setupClickListener('changetype-all', []);
+    setupClickListener('changetype-address', ['address']);
+    setupClickListener('changetype-establishment', ['establishment']);
+    setupClickListener('changetype-geocode', ['geocode']);
+
+    document.getElementById('use-strict-bounds')
+        .addEventListener('click', function() {
+            console.log('Checkbox clicked! New state=' + this.checked);
+            autocomplete.setOptions({strictBounds: this.checked});
+        });
+},
 
     // this is taken from google sample code for how to embed a map
     // This example adds a search box to a map, using the Google Place Autocomplete
@@ -381,7 +502,7 @@ __proto__: Object
     // parameter when you first load the API. For example:
     // <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places">
 
-    initAutocomplete: function () {
+    /*initAutocomplete: function () {
         var map = new google.maps.Map(document.getElementById('map'), {
             center: {lat: -33.8688, lng: 151.2195},
             zoom: 13,
@@ -446,7 +567,7 @@ __proto__: Object
             });
             map.fitBounds(bounds);
         });
-    },
+    },*/
 
 
 }
